@@ -17,7 +17,14 @@
 namespace proc
 {
 
-typedef void (*messageHandler_t)(Variant& var);
+struct ProcessId
+{
+    unsigned int m_index;
+    uintptr_t m_pointer;
+    uint64_t m_id;
+};
+
+typedef void (*messageHandler_t)(const Variant& var, ProcessId self);
 typedef void(*initFunc_t)();
 typedef std::unordered_map<unsigned int, messageHandler_t> messageMap_t;
 
@@ -32,13 +39,6 @@ enum class MSG_STAT : unsigned int
 enum class PROC_CONTROL : unsigned int
 {
     KILL = 0 // Kill Process.
-};
-
-struct ProcessId
-{
-    unsigned int m_index;
-    uintptr_t m_pointer;
-    uint64_t m_id;
 };
 
 } // namespace proc
@@ -115,6 +115,8 @@ void removeProcess(Process* process)
     g_manager.m_queueFront++;
     g_manager.m_nextFreeQueue[g_manager.m_queueFront.load()].store(process->m_Pid.m_index);
     g_manager.m_processes[process->m_Pid.m_index].store(0);
+    delete process;
+    g_manager.m_numProcesses--;
 }
 
 void run(Process* process, ProcessManager* manager, unsigned int index)
@@ -132,11 +134,10 @@ void run(Process* process, ProcessManager* manager, unsigned int index)
 				var = process->m_messageQueue[process->m_current];
 				if(Type<PROC_CONTROL>::Id == var.getId())
 				{
-                    PROC_CONTROL control = var;
+                   PROC_CONTROL control = var.get<PROC_CONTROL>();
+                   int a = var.getId();
                     // TODO: switch(control)
                     removeProcess(process);
-                    delete process;
-                    g_manager.m_numProcesses--;
                     return;
 				}
                 else
@@ -151,7 +152,7 @@ void run(Process* process, ProcessManager* manager, unsigned int index)
                     else
                     {
                         auto func = process->m_map[var.getId()];
-                        func(var);
+                        func(var, process->m_Pid);
                         process->m_messageQueue[process->m_current] = Variant(nullptr);
                         process->m_current++;
                         process->m_numMessages--;

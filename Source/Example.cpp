@@ -1,75 +1,51 @@
 #include "Process.h"
-#include <cstdio>
-#include <utility>
+#include <tuple>
 
-typedef std::pair<proc::ProcessId, proc::ProcessId> idPair_t;
+using std::tuple;
+using std::get;
+using std::make_tuple;
+using namespace proc;
 
-void pingFunc(Variant& var)
+typedef tuple<ProcessId, ProcessId> idTuple;
+
+void function1(const Variant& var, ProcessId self)
 {
-    // This is Possible because of the converison operator.
-    // If you would like to use 'static_cast<ProcessId>(var)'
-    // then uncomment 'explicit' in the conversion
-    // operator overload in 'Variant.h'.
-    idPair_t id = var;
-    auto self = id.first;
-    auto receiver = id.second;
-
-    static unsigned int numOfPings = 0;
-    if(numOfPings < 10)
-    {
-        numOfPings++;
-        proc::sendMsg(receiver, std::make_pair(receiver, self));
-        return;
-    }
-    else
-    {
-        printf("I've gotten enough pings. I'm finished.\n");
-        proc::sendMsg(receiver, proc::PROC_CONTROL::KILL);
-        proc::sendMsg(self, proc::PROC_CONTROL::KILL);
-
-        return;
-    }
+	int num = var.get<int>();
+	printf("Hi from function1. I got an int '%d'. It's type id is: %d\n", num, Type<int>::Id);
 }
 
-void pongFunc(Variant& var)
+void function2(const Variant& var, ProcessId self)
 {
-    idPair_t id = var;
-    auto self = id.first;
-    auto receiver = id.second;
+	char ch = var.get<char>();
+	printf("Hi from function2. I got a char '%c'. It's type id is: %d\n", ch, Type<char>::Id);
+}
 
-    proc::MSG_STAT status = sendMsg(receiver, std::make_pair(receiver, self));
-    if(status == proc::MSG_STAT::SUCCESS)
-    {
-        return;
-    }
-    else
-    {
-        printf("The Process didn't receive the message successfully.\n");
-        return;
-    }
+void function3(const Variant& var, ProcessId self)
+{
+	idTuple ids = var.get<idTuple>();
+
+	printf("Hi from function3. I got a tuple with 2 ProcessId's. It's type id is: %d\n",
+        Type<idTuple>::Id);
+		
+	auto id1 = get<0>(ids);	
+	auto id2 = get<1>(ids);	
+	
+	sendMsg(id1, PROC_CONTROL::KILL);
+	sendMsg(id2, PROC_CONTROL::KILL);	
+	sendMsg(self, PROC_CONTROL::KILL);		
 }
 
 int main()
-{   /*
-     * The spawn function uses initializer_list syntax and takes an unordered_map
-     * of Type<T>::Id as a key, where T is any type, and a function with the signature of
-     * 'void (*)(Variant&)' as the value. Any number of key-value pairs can be used. 
-     * Whenever the process is sent a message of the type as the key the function will be
-     * called.
-     *
-     * It is overloaded so you can add a function of type 'void (*)()'. This will be
-     * called once the process is spawned. A lambda
-     * conforming to that type may be used also, as is done in the example below.
-     */
-    
-    proc::ProcessId ping = spawn({{Type<idPair_t>::Id, pingFunc}});
-    proc::ProcessId pong = spawn([] { printf("From the init function.\n"); },
-            {{Type<idPair_t>::Id, pongFunc}});
-    
-    sendMsg(ping, std::make_pair(ping, pong));
-
-    // This must be called so that the main thread waits for all processes to finish. No join necessary.
-    proc::processWait();
-    printf("Finished.\n");
-    return 0;
-}
+{
+	auto id1 = spawn([] { printf("This is an init function.\n"); }, {{Type<int>::Id, function1}});
+	auto id2 = spawn({{Type<char>::Id, function2}});
+	auto id3 = spawn({{Type<int>::Id, function1}, {Type<char>::Id, function2}, {Type<idTuple>::Id, function3}});
+	idTuple ids(id1, id2);
+	
+	sendMsg(id1, 12);
+	sendMsg(id2, 'C');
+	sendMsg(id3, 'Z');
+	sendMsg(id3, 500);
+	
+	sendMsg(id3, ids); 
+} 

@@ -7,5 +7,6 @@ elseif(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "-std=c++11")
 endif()
 
-set(SRC Source/Example.cpp)
+set(SRC Source/Spinlock.cpp 
+    Source/Example.cpp)
 add_executable(Example ${SRC})
