@@ -57,5 +57,7 @@ int main()
 	sendMsg(id3, 500);
 	
 	sendMsg(id3, ids); 
+	
+	return 0;
 } 
 ```
