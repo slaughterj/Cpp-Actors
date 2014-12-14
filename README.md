@@ -61,3 +61,11 @@ int main()
 	return 0;
 } 
 ```
+
+###Notes
+	Although the implementation itself is lightweight, the actors themselves are not, that is their underlying
+implementation uses OS threads.
+	
+###Requirements
+	The code uses several features of C++11 such as variadic templates and lambda functions. The current releases
+of Clang, Visual Studio and GCC will compile this just fine.
