@@ -57,6 +57,7 @@ int main()
 	sendMsg(id3, 500);
 	
 	sendMsg(id3, ids); 
+	processWait(); // Main thread waits for all actors to finish.
 	
 	return 0;
 } 
