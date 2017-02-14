@@ -62,6 +62,12 @@ public:
          }
          return *(T*)data;
      }
+	
+    template<typename T>
+    explicit operator T()
+    {
+	return *(*)data;
+    }
 	 
 	 unsigned int getId() const
 	 {
